@@ -8,7 +8,7 @@ type User struct {
 	gorm.Model
 	Nickname     string    `gorm:"not null;"`
 	Email        string    `gorm:"not null; unique;"`
-	HashPassword string    `gorm:"not null;"`
+	HashPassword string    `gorm:"not null;" json:"password"`
 	Posts        []Post    `gorm:"foreignKey:AuthorID;"`
 	Messages     []Message `gorm:"foreignKey:SenderID;"`
 	Chats        []Chat    `gorm:"many2many:user_x_chat;"`
