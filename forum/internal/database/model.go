@@ -1,35 +1,39 @@
 package database
 
 import (
-	"gorm.io/gorm"
+	"time"
 )
 
 type User struct {
-	gorm.Model
+	ID           uint      `gorm:"primarykey; autoIncrement"`
 	Nickname     string    `gorm:"not null;"`
 	Email        string    `gorm:"not null; unique;"`
-	HashPassword string    `gorm:"not null;" json:"password"`
-	Posts        []Post    `gorm:"foreignKey:AuthorID;"`
-	Messages     []Message `gorm:"foreignKey:SenderID;"`
-	Chats        []Chat    `gorm:"many2many:user_x_chat;"`
+	HashPassword string    `gorm:"not null;" json:"Password"`
+	RegisteredAt time.Time `gorm:"autoCreateTime"`
+	Posts        []Post    `gorm:"foreignKey:AuthorID;" json:"-"`
+	Messages     []Message `gorm:"foreignKey:SenderID;" json:"-"`
+	Chats        []Chat    `gorm:"many2many:user_x_chat;" json:"-"`
 }
 
 type Post struct {
-	gorm.Model
-	Content  string `gorm:"not null;"`
-	AuthorID uint
+	ID        uint   `gorm:"primarykey; autoIncrement"`
+	Content   string `gorm:"not null;"`
+	AuthorID  uint
+	CreatedAt time.Time
 }
 
 type Message struct {
-	gorm.Model
+	ID       uint   `gorm:"primarykey; autoIncrement"`
 	Content  string `gorm:"not null;"`
 	SenderID uint
 	ChatID   uint
+	SendedAt time.Time `gorm:"autoCreateTime"`
 }
 
 type Chat struct {
-	gorm.Model
-	Name     string    `gorm:"not null;"`
-	Members  []User    `gorm:"many2many:user_x_chat;"`
-	Messages []Message `gorm:"foreignKey:ChatID;"`
+	ID        uint   `gorm:"primarykey; autoIncrement"`
+	Name      string `gorm:"not null;"`
+	CreatedAt time.Time
+	Members   []User    `gorm:"many2many:user_x_chat;" json:"-"`
+	Messages  []Message `gorm:"foreignKey:ChatID;" json:"-"`
 }
