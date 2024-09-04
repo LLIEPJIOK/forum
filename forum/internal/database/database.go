@@ -1,10 +1,13 @@
 package database
 
 import (
+	"errors"
 	"fmt"
 
 	"gorm.io/gorm"
 )
+
+var ErrUniqueConstraint = errors.New("duplicate key value violates uniqueness constraint")
 
 type Database struct {
 	gormDB *gorm.DB
@@ -16,7 +19,7 @@ func New(gormDB *gorm.DB) *Database {
 	}
 }
 
-func (db *Database) CreateTables() error {
+func (db *Database) Migrate() error {
 	err := db.gormDB.AutoMigrate(User{}, Post{}, Message{}, Chat{})
 	if err != nil {
 		return fmt.Errorf("cannot create tables: %w", err)
@@ -26,6 +29,10 @@ func (db *Database) CreateTables() error {
 }
 
 func (db *Database) AddUser(user *User) error {
+	if err := db.gormDB.Where("email = ?", user.Email).First(&User{}).Error; err == nil {
+		return fmt.Errorf("cannot add user %#v to db: %w", user, ErrUniqueConstraint)
+	}
+
 	result := db.gormDB.Create(user)
 	if result.Error != nil {
 		return fmt.Errorf("cannot add user %#v to db: %w", user, result.Error)
@@ -45,7 +52,7 @@ func (db *Database) GetUserByEmail(email string) (*User, error) {
 }
 
 func (db *Database) GetUserByID(id uint) (*User, error) {
-	var user *User
+	user := &User{}
 	result := db.gormDB.Where("id = ?", id).First(user)
 	if result.Error != nil {
 		return nil, fmt.Errorf("cannot get user by id = %d: %w", id, result.Error)
@@ -54,14 +61,24 @@ func (db *Database) GetUserByID(id uint) (*User, error) {
 	return user, nil
 }
 
-func (db *Database) UpdateUser(user *User) error {
-	result := db.gormDB.Save(user)
-
-	if result.Error != nil {
-		return fmt.Errorf("cannot update user %#v: %w", user, result.Error)
+func (db *Database) UpdateUser(user *User) (*User, error) {
+	if user.Email != "" {
+		if err := db.gormDB.Where("email = ?", user.Email).First(&User{}).Error; err == nil {
+			return nil, fmt.Errorf("cannot update user %#v: %w", user, ErrUniqueConstraint)
+		}
 	}
 
-	return nil
+	result := db.gormDB.Model(&User{}).Where("id = ?", user.ID).Updates(user)
+	if result.Error != nil {
+		return nil, fmt.Errorf("cannot update user %#v: %w", user, result.Error)
+	}
+
+	updatedUser, err := db.GetUserByID(user.ID)
+	if err != nil {
+		return nil, fmt.Errorf("db.GetUserByID(%d): %w", user.ID, err)
+	}
+
+	return updatedUser, nil
 }
 
 func (db *Database) DeleteUser(id uint) error {
@@ -83,7 +100,7 @@ func (db *Database) AddPost(post *Post) error {
 }
 
 func (db *Database) GetPost(id uint) (*Post, error) {
-	var post *Post
+	post := &Post{}
 	result := db.gormDB.Where("id = ?", id).First(post)
 	if result.Error != nil {
 		return nil, fmt.Errorf("cannot get post by id = %d: %w", id, result.Error)
@@ -121,7 +138,7 @@ func (db *Database) AddMessage(message *Message) error {
 }
 
 func (db *Database) GetMessage(id uint) (*Message, error) {
-	var message *Message
+	message := &Message{}
 	result := db.gormDB.Where("id = ?", id).First(message)
 	if result.Error != nil {
 		return nil, fmt.Errorf("cannot get message by id = %d: %w", id, result.Error)
@@ -159,7 +176,7 @@ func (db *Database) AddChat(chat *Chat) error {
 }
 
 func (db *Database) GetChat(id uint) (*Chat, error) {
-	var chat *Chat
+	chat := &Chat{}
 	result := db.gormDB.Where("id = ?", id).First(chat)
 	if result.Error != nil {
 		return nil, fmt.Errorf("cannot get chat by id = %d: %w", id, result.Error)
