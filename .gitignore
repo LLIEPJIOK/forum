@@ -18,6 +18,9 @@
 # vendor/
 .vscode/
 
+# Logs directory
+forum/logs/
+
 # Go workspace file
 go.work
 go.work.sum
