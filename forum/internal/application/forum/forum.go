@@ -31,7 +31,15 @@ func Start() error {
 		return fmt.Errorf("cannot up migrations: %w", err)
 	}
 
-	file, err := os.OpenFile(os.Getenv("LOGS_FILE"), os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0o644)
+	if err := os.MkdirAll(os.Getenv("LOGS_DIR"), os.ModeDir); err != nil {
+		return fmt.Errorf("cannot make logs directory: %w", err)
+	}
+
+	file, err := os.OpenFile(
+		fmt.Sprintf("%s/%s", os.Getenv("LOGS_DIR"), os.Getenv("LOGS_FILE")),
+		os.O_CREATE|os.O_WRONLY|os.O_TRUNC,
+		0o644,
+	)
 	if err != nil {
 		return fmt.Errorf("cannot open file %q: %w", os.Getenv("LOGS_FILE"), err)
 	}
