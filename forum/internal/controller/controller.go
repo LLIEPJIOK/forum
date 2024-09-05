@@ -24,6 +24,12 @@ type DBInterface interface {
 	GetAllPosts() ([]*database.Post, error)
 	UpdatePost(post *database.Post) (*database.Post, error)
 	DeletePost(id uint) error
+
+	AddMessage(message *database.Message) error
+	GetMessage(id uint) (*database.Message, error)
+	GetAllMessages() ([]*database.Message, error)
+	UpdateMessage(message *database.Message) (*database.Message, error)
+	DeleteMessage(id uint) error
 }
 
 type Controller struct {
@@ -311,6 +317,143 @@ func (ctrl *Controller) DeletePost(c *gin.Context) {
 			fmt.Sprintf("ctrl.db.DeletePost(%d): %s", id, err),
 			"method",
 			"ctrl.DeletePost",
+		)
+		c.IndentedJSON(http.StatusInternalServerError, gin.H{"error": "server is unavailable now"})
+		c.Abort()
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "successfully deleted"})
+}
+
+func (ctrl *Controller) AddMessage(c *gin.Context) {
+	var message database.Message
+	if err := c.BindJSON(&message); err != nil {
+		ctrl.logger.Info(fmt.Sprintf("invalid message json: %s", err), "method", "ctrl.AddMessage")
+		c.IndentedJSON(http.StatusInternalServerError, gin.H{"error": "json is invalid"})
+		c.Abort()
+		return
+	}
+
+	if err := ctrl.db.AddMessage(&message); err != nil {
+		if errors.Is(err, database.ErrForeignKeyConstraint) {
+			c.IndentedJSON(http.StatusBadRequest, gin.H{"error": "no such creator with this id or chat with this id"})
+		} else {
+			c.IndentedJSON(http.StatusInternalServerError, gin.H{"error": "server is unavailable now"})
+		}
+
+		ctrl.logger.Error(
+			fmt.Sprintf("ctrl.db.AddMessage(%#v): %s", &message, err),
+			"method",
+			"ctrl.AddMessage",
+		)
+		c.Abort()
+		return
+	}
+
+	c.IndentedJSON(http.StatusOK, message)
+}
+
+func (ctrl *Controller) GetMessage(c *gin.Context) {
+	strID := c.Param("id")
+	id, err := strconv.Atoi(strID)
+	if err != nil {
+		ctrl.logger.Info(fmt.Sprintf("invalid message id: %s", err), "method", "ctrl.GetMessage")
+		c.IndentedJSON(http.StatusBadRequest, gin.H{"error": "invalid message id"})
+		c.Abort()
+		return
+	}
+
+	message, err := ctrl.db.GetMessage(uint(id))
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			c.IndentedJSON(http.StatusNotFound, gin.H{"error": "no message with this id"})
+		} else {
+			c.IndentedJSON(http.StatusInternalServerError, gin.H{"error": "server is unavailable now"})
+		}
+
+		ctrl.logger.Info(
+			fmt.Sprintf("ctrl.db.GetMessage(uint(%d)): %s", id, err),
+			"method",
+			"ctrl.GetMessage",
+		)
+		c.Abort()
+		return
+	}
+
+	c.IndentedJSON(http.StatusOK, message)
+}
+
+func (ctrl *Controller) GetAllMessages(c *gin.Context) {
+	messages, err := ctrl.db.GetAllMessages()
+	if err != nil {
+		ctrl.logger.Error(
+			fmt.Sprintf("ctrl.db.GetAllMessages(): %s", err),
+			"method",
+			"ctrl.GetAllMessages",
+		)
+		c.IndentedJSON(http.StatusInternalServerError, gin.H{"error": "server is unavailable now"})
+		c.Abort()
+		return
+	}
+
+	c.IndentedJSON(http.StatusOK, messages)
+}
+
+func (ctrl *Controller) UpdateMessage(c *gin.Context) {
+	strID := c.Param("id")
+	id, err := strconv.Atoi(strID)
+	if err != nil {
+		ctrl.logger.Info(fmt.Sprintf("invalid message id: %s", err), "method", "ctrl.UpdateMessage")
+		c.IndentedJSON(http.StatusBadRequest, gin.H{"error": "invalid message id"})
+		c.Abort()
+		return
+	}
+
+	var message database.Message
+	if err := c.BindJSON(&message); err != nil {
+		ctrl.logger.Info(fmt.Sprintf("invalid message json: %s", err), "method", "ctrl.UpdateMessage")
+		c.IndentedJSON(http.StatusInternalServerError, gin.H{"error": "json is invalid"})
+		c.Abort()
+		return
+	}
+
+	message.ID = uint(id)
+	updatedMessage, err := ctrl.db.UpdateMessage(&message)
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			c.IndentedJSON(http.StatusNotFound, gin.H{"error": "no message with this id"})
+		} else {
+			c.IndentedJSON(http.StatusInternalServerError, gin.H{"error": "server is unavailable now"})
+		}
+
+		ctrl.logger.Error(
+			fmt.Sprintf("ctrl.db.UpdateMessage(%#v): %s", &message, err),
+			"method",
+			"ctrl.UpdateMessage",
+		)
+		c.Abort()
+		return
+	}
+
+	c.IndentedJSON(http.StatusOK, updatedMessage)
+}
+
+func (ctrl *Controller) DeleteMessage(c *gin.Context) {
+	strID := c.Param("id")
+	id, err := strconv.Atoi(strID)
+	if err != nil {
+		ctrl.logger.Info(fmt.Sprintf("invalid message id: %s", err), "method", "ctrl.DeleteMessage")
+		c.IndentedJSON(http.StatusBadRequest, gin.H{"error": "invalid message id"})
+		c.Abort()
+		return
+	}
+
+	if err := ctrl.db.DeleteMessage(uint(id)); err != nil {
+		ctrl.logger.Error(
+			fmt.Sprintf("ctrl.db.DeleteMessage(%d): %s", id, err),
+			"method",
+			"ctrl.DeleteMessage",
 		)
 		c.IndentedJSON(http.StatusInternalServerError, gin.H{"error": "server is unavailable now"})
 		c.Abort()

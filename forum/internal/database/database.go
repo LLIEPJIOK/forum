@@ -112,7 +112,7 @@ func (db *Database) AddPost(post *Post) error {
 	_, err := db.GetUserByID(post.AuthorID)
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return fmt.Errorf("cannot add post %#v to db: %w", post.AuthorID, ErrForeignKeyConstraint)
+			return fmt.Errorf("cannot add post %#v to db: %w", post, ErrForeignKeyConstraint)
 		} else {
 			return fmt.Errorf("db.GetUserByID(%d): %w", post.AuthorID, err)
 		}
@@ -170,6 +170,22 @@ func (db *Database) DeletePost(id uint) error {
 }
 
 func (db *Database) AddMessage(message *Message) error {
+	if _, err := db.GetUserByID(message.SenderID); err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return fmt.Errorf("cannot add message %#v to db: %w", message, ErrForeignKeyConstraint)
+		} else {
+			return fmt.Errorf("db.GetUserByID(%d): %w", message.SenderID, err)
+		}
+	}
+
+	if _, err := db.GetChat(message.ChatID); err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return fmt.Errorf("cannot add message %#v to db: %w", message, ErrForeignKeyConstraint)
+		} else {
+			return fmt.Errorf("db.GetChat(%d): %w", message.ChatID, err)
+		}
+	}
+
 	result := db.gormDB.Create(message)
 	if result.Error != nil {
 		return fmt.Errorf("cannot add message %#v to db: %w", message, result.Error)
@@ -188,14 +204,28 @@ func (db *Database) GetMessage(id uint) (*Message, error) {
 	return message, nil
 }
 
-func (db *Database) UpdateMessage(message *Message) error {
-	result := db.gormDB.Save(message)
-
+func (db *Database) GetAllMessages() ([]*Message, error) {
+	var messages []*Message
+	result := db.gormDB.Find(&messages)
 	if result.Error != nil {
-		return fmt.Errorf("cannot update message %#v: %w", message, result.Error)
+		return nil, fmt.Errorf("cannot get all messages: %w", result.Error)
 	}
 
-	return nil
+	return messages, nil
+}
+
+func (db *Database) UpdateMessage(message *Message) (*Message, error) {
+	result := db.gormDB.Model(&Message{}).Select("content").Where("id = ?", message.ID).Updates(message)
+	if result.Error != nil {
+		return nil, fmt.Errorf("cannot update message %#v: %w", message, result.Error)
+	}
+
+	updatedMessage, err := db.GetMessage(message.ID)
+	if err != nil {
+		return nil, fmt.Errorf("db.GetMessage(%d): %w", message.ID, err)
+	}
+
+	return updatedMessage, nil
 }
 
 func (db *Database) DeleteMessage(id uint) error {

@@ -26,6 +26,13 @@ func New(ctrl *controller.Controller) *Router {
 	post.PUT(":id", ctrl.UpdatePost)
 	post.DELETE(":id", ctrl.DeletePost)
 
+	message := eng.Group("/message")
+	message.POST("", ctrl.AddMessage)
+	message.GET(":id", ctrl.GetMessage)
+	message.GET("/list/", ctrl.GetAllMessages)
+	message.PUT(":id", ctrl.UpdateMessage)
+	message.DELETE(":id", ctrl.DeleteMessage)
+
 	return &Router{
 		engine: eng,
 	}
