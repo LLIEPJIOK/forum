@@ -56,7 +56,7 @@ x-airflow-common:
     AIRFLOW__CORE__EXECUTOR: CeleryExecutor
     AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow:airflow@postgres/airflow
     AIRFLOW__CELERY__RESULT_BACKEND: db+postgresql://airflow:airflow@postgres/airflow
-    AIRFLOW__CELERY__BROKER_URL: re dis://:@redis:6379/0
+    AIRFLOW__CELERY__BROKER_URL: redis://:@redis:6379/0
     AIRFLOW__CORE__FERNET_KEY: ''
     AIRFLOW__CORE__DAGS_ARE_PAUSED_AT_CREATION: 'true'
     AIRFLOW__CORE__LOAD_EXAMPLES: 'true'
@@ -284,19 +284,5 @@ services:
       airflow-init:
         condition: service_completed_successfully
 
-  clickhouse:
-    image: clickhouse/clickhouse-server:latest
-    container_name: clickhouse
-    volumes:
-      - clickhouse_data:/var/lib/clickhouse
-    ports:
-      - "8123:8123" # HTTP интерфейс
-      - "9000:9000" # TCP интерфейс
-    environment:
-      CLICKHOUSE_USER: default
-      CLICKHOUSE_PASSWORD: ''
-      CLICKHOUSE_DB: default
-    restart: always
 volumes:
   postgres-db-volume:
-  clickhouse_data:

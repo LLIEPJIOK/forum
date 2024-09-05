@@ -9,7 +9,7 @@ from airflow.operators.python import PythonOperator
 
 
 API_KEY = Variable.get("API_KEY")
-POST_USER_URL = "http://localhost:8000/user"
+POST_USER_URL = "http://forum-forum-1:8000/user"
 
 
 default_args = {
@@ -60,7 +60,7 @@ def batch_generate_users(batch: int, batch_iteration: int):
             data = get_user_data()
             batched_users.append(data)
         for user in batched_users:
-            requests.post(url="http://localhost:8000/user", data=json.dumps(user))            
+            requests.post(url="http://forum-forum-1:8000/user", data=json.dumps(user))            
         batched_users = []
         
 
