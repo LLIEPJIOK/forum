@@ -7,7 +7,10 @@ import (
 	"gorm.io/gorm"
 )
 
-var ErrUniqueConstraint = errors.New("duplicate key value violates uniqueness constraint")
+var (
+	ErrUniqueConstraint     = errors.New("duplicate primary key value violates uniqueness constraint")
+	ErrForeignKeyConstraint = errors.New("missing key in external table violates foreign key constraint")
+)
 
 type Database struct {
 	gormDB *gorm.DB
@@ -29,20 +32,25 @@ func (db *Database) Migrate() error {
 }
 
 func (db *Database) AddUser(user *User) error {
-	if err := db.gormDB.Where("email = ?", user.Email).First(&User{}).Error; err == nil {
-		return fmt.Errorf("cannot add user %#v to db: %w", user, ErrUniqueConstraint)
+	_, err := db.GetUserByEmail(user.Email)
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			result := db.gormDB.Create(user)
+			if result.Error != nil {
+				return fmt.Errorf("cannot add user %#v to db: %w", user, result.Error)
+			}
+
+			return nil
+		} else {
+			return fmt.Errorf("cannot check email = %s existence: %w", user.Email, err)
+		}
 	}
 
-	result := db.gormDB.Create(user)
-	if result.Error != nil {
-		return fmt.Errorf("cannot add user %#v to db: %w", user, result.Error)
-	}
-
-	return nil
+	return fmt.Errorf("cannot add user %#v to db: %w", user, ErrUniqueConstraint)
 }
 
 func (db *Database) GetUserByEmail(email string) (*User, error) {
-	var user *User
+	user := &User{}
 	result := db.gormDB.Where("email = ?", email).First(user)
 	if result.Error != nil {
 		return nil, fmt.Errorf("cannot get user by email = %q: %w", email, result.Error)
@@ -59,6 +67,16 @@ func (db *Database) GetUserByID(id uint) (*User, error) {
 	}
 
 	return user, nil
+}
+
+func (db *Database) GetAllUsers() ([]*User, error) {
+	var users []*User
+	result := db.gormDB.Find(&users)
+	if result.Error != nil {
+		return nil, fmt.Errorf("cannot get all users: %w", result.Error)
+	}
+
+	return users, nil
 }
 
 func (db *Database) UpdateUser(user *User) (*User, error) {
@@ -91,12 +109,31 @@ func (db *Database) DeleteUser(id uint) error {
 }
 
 func (db *Database) AddPost(post *Post) error {
+	_, err := db.GetUserByID(post.AuthorID)
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return fmt.Errorf("cannot add post %#v to db: %w", post.AuthorID, ErrForeignKeyConstraint)
+		} else {
+			return fmt.Errorf("db.GetUserByID(%d): %w", post.AuthorID, err)
+		}
+	}
+
 	result := db.gormDB.Create(post)
 	if result.Error != nil {
 		return fmt.Errorf("cannot add post %#v to db: %w", post, result.Error)
 	}
 
 	return nil
+}
+
+func (db *Database) GetAllPosts() ([]*Post, error) {
+	var posts []*Post
+	result := db.gormDB.Find(&posts)
+	if result.Error != nil {
+		return nil, fmt.Errorf("cannot get all posts: %w", result.Error)
+	}
+
+	return posts, nil
 }
 
 func (db *Database) GetPost(id uint) (*Post, error) {
@@ -109,14 +146,18 @@ func (db *Database) GetPost(id uint) (*Post, error) {
 	return post, nil
 }
 
-func (db *Database) UpdatePost(post *Post) error {
-	result := db.gormDB.Save(post)
-
+func (db *Database) UpdatePost(post *Post) (*Post, error) {
+	result := db.gormDB.Model(&Post{}).Select("content").Where("id = ?", post.ID).Updates(post)
 	if result.Error != nil {
-		return fmt.Errorf("cannot update post %#v: %w", post, result.Error)
+		return nil, fmt.Errorf("cannot update post %#v: %w", post, result.Error)
 	}
 
-	return nil
+	updatedPost, err := db.GetPost(post.ID)
+	if err != nil {
+		return nil, fmt.Errorf("db.GetPost(%d): %w", post.ID, err)
+	}
+
+	return updatedPost, nil
 }
 
 func (db *Database) DeletePost(id uint) error {
