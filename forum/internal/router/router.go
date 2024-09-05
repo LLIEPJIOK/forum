@@ -15,6 +15,7 @@ func New(ctrl *controller.Controller) *Router {
 	user := eng.Group("/user")
 	user.POST("", ctrl.AddUser)
 	user.GET(":id", ctrl.GetUser)
+	user.GET("/list/", ctrl.GetAllUsers)
 	user.PUT(":id", ctrl.UpdateUser)
 	user.DELETE(":id", ctrl.DeleteUser)
 

@@ -15,6 +15,7 @@ import (
 type DBInterface interface {
 	AddUser(user *database.User) error
 	GetUserByID(id uint) (*database.User, error)
+	GetAllUsers() ([]*database.User, error)
 	UpdateUser(user *database.User) (*database.User, error)
 	DeleteUser(id uint) error
 
@@ -89,6 +90,18 @@ func (ctrl *Controller) GetUser(c *gin.Context) {
 	}
 
 	c.IndentedJSON(http.StatusOK, user)
+}
+
+func (ctrl *Controller) GetAllUsers(c *gin.Context) {
+	users, err := ctrl.db.GetAllUsers()
+	if err != nil {
+		ctrl.logger.Error(fmt.Sprintf("ctrl.db.GetAllUsers(): %s", err), "method", "ctrl.GetAllUsers")
+		c.IndentedJSON(http.StatusInternalServerError, gin.H{"error": "server is unavailable now"})
+		c.Abort()
+		return
+	}
+
+	c.IndentedJSON(http.StatusOK, users)
 }
 
 func (ctrl *Controller) UpdateUser(c *gin.Context) {
