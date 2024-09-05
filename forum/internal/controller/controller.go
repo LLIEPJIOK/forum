@@ -75,7 +75,7 @@ func (ctrl *Controller) GetUser(c *gin.Context) {
 				"method",
 				"ctrl.GetUser",
 			)
-			c.IndentedJSON(http.StatusBadRequest, gin.H{"error": "no user with this id"})
+			c.IndentedJSON(http.StatusNotFound, gin.H{"error": "no user with this id"})
 		} else {
 			ctrl.logger.Info(
 				fmt.Sprintf("ctrl.db.GetUserByID(uint(%d)): %s", id, err),
@@ -122,7 +122,7 @@ func (ctrl *Controller) UpdateUser(c *gin.Context) {
 				"method",
 				"ctrl.UpdateUser",
 			)
-			c.IndentedJSON(http.StatusBadRequest, gin.H{"error": "no user with this id"})
+			c.IndentedJSON(http.StatusNotFound, gin.H{"error": "no user with this id"})
 		} else {
 			ctrl.logger.Error(fmt.Sprintf("ctrl.db.AddUser(%#v): %s", user, err), "method", "ctrl.UpdateUser")
 			c.IndentedJSON(http.StatusInternalServerError, gin.H{"error": "server is unavailable now"})
