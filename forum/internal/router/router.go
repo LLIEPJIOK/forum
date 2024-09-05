@@ -18,6 +18,13 @@ func New(ctrl *controller.Controller) *Router {
 	user.PUT(":id", ctrl.UpdateUser)
 	user.DELETE(":id", ctrl.DeleteUser)
 
+	post := eng.Group("/post")
+	post.POST("", ctrl.AddPost)
+	post.GET(":id", ctrl.GetPost)
+	post.GET("/list/", ctrl.GetAllPosts)
+	post.PUT(":id", ctrl.UpdatePost)
+	post.DELETE(":id", ctrl.DeletePost)
+
 	return &Router{
 		engine: eng,
 	}
