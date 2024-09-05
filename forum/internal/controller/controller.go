@@ -49,12 +49,19 @@ func (ctrl *Controller) AddUser(c *gin.Context) {
 
 	if err := ctrl.db.AddUser(&user); err != nil {
 		if errors.Is(err, database.ErrUniqueConstraint) {
-			c.IndentedJSON(http.StatusBadRequest, gin.H{"error": "user with this email already registered"})
+			c.IndentedJSON(
+				http.StatusBadRequest,
+				gin.H{"error": "user with this email already registered"},
+			)
 		} else {
 			c.IndentedJSON(http.StatusInternalServerError, gin.H{"error": "server is unavailable now"})
 		}
 
-		ctrl.logger.Error(fmt.Sprintf("ctrl.db.AddUser(%#v): %s", &user, err), "method", "ctrl.AddUser")
+		ctrl.logger.Error(
+			fmt.Sprintf("ctrl.db.AddUser(%#v): %s", &user, err),
+			"method",
+			"ctrl.AddUser",
+		)
 		c.Abort()
 		return
 	}
@@ -95,7 +102,11 @@ func (ctrl *Controller) GetUser(c *gin.Context) {
 func (ctrl *Controller) GetAllUsers(c *gin.Context) {
 	users, err := ctrl.db.GetAllUsers()
 	if err != nil {
-		ctrl.logger.Error(fmt.Sprintf("ctrl.db.GetAllUsers(): %s", err), "method", "ctrl.GetAllUsers")
+		ctrl.logger.Error(
+			fmt.Sprintf("ctrl.db.GetAllUsers(): %s", err),
+			"method",
+			"ctrl.GetAllUsers",
+		)
 		c.IndentedJSON(http.StatusInternalServerError, gin.H{"error": "server is unavailable now"})
 		c.Abort()
 		return
@@ -126,14 +137,21 @@ func (ctrl *Controller) UpdateUser(c *gin.Context) {
 	updatedUser, err := ctrl.db.UpdateUser(&user)
 	if err != nil {
 		if errors.Is(err, database.ErrUniqueConstraint) {
-			c.IndentedJSON(http.StatusBadRequest, gin.H{"error": "user with this email already registered"})
+			c.IndentedJSON(
+				http.StatusBadRequest,
+				gin.H{"error": "user with this email already registered"},
+			)
 		} else if errors.Is(err, gorm.ErrRecordNotFound) {
 			c.IndentedJSON(http.StatusNotFound, gin.H{"error": "no user with this id"})
 		} else {
 			c.IndentedJSON(http.StatusInternalServerError, gin.H{"error": "server is unavailable now"})
 		}
 
-		ctrl.logger.Error(fmt.Sprintf("ctrl.db.UpdateUser(%#v): %s", &user, err), "method", "ctrl.UpdateUser")
+		ctrl.logger.Error(
+			fmt.Sprintf("ctrl.db.UpdateUser(%#v): %s", &user, err),
+			"method",
+			"ctrl.UpdateUser",
+		)
 		c.Abort()
 		return
 	}
@@ -152,7 +170,11 @@ func (ctrl *Controller) DeleteUser(c *gin.Context) {
 	}
 
 	if err := ctrl.db.DeleteUser(uint(id)); err != nil {
-		ctrl.logger.Error(fmt.Sprintf("ctrl.db.DeleteUser(%d): %s", id, err), "method", "ctrl.DeleteUser")
+		ctrl.logger.Error(
+			fmt.Sprintf("ctrl.db.DeleteUser(%d): %s", id, err),
+			"method",
+			"ctrl.DeleteUser",
+		)
 		c.IndentedJSON(http.StatusInternalServerError, gin.H{"error": "server is unavailable now"})
 		c.Abort()
 		return
@@ -177,7 +199,11 @@ func (ctrl *Controller) AddPost(c *gin.Context) {
 			c.IndentedJSON(http.StatusInternalServerError, gin.H{"error": "server is unavailable now"})
 		}
 
-		ctrl.logger.Error(fmt.Sprintf("ctrl.db.AddPost(%#v): %s", &post, err), "method", "ctrl.AddPost")
+		ctrl.logger.Error(
+			fmt.Sprintf("ctrl.db.AddPost(%#v): %s", &post, err),
+			"method",
+			"ctrl.AddPost",
+		)
 		c.Abort()
 		return
 	}
@@ -218,7 +244,11 @@ func (ctrl *Controller) GetPost(c *gin.Context) {
 func (ctrl *Controller) GetAllPosts(c *gin.Context) {
 	posts, err := ctrl.db.GetAllPosts()
 	if err != nil {
-		ctrl.logger.Error(fmt.Sprintf("ctrl.db.GetAllUsers(): %s", err), "method", "ctrl.GetAllPosts")
+		ctrl.logger.Error(
+			fmt.Sprintf("ctrl.db.GetAllUsers(): %s", err),
+			"method",
+			"ctrl.GetAllPosts",
+		)
 		c.IndentedJSON(http.StatusInternalServerError, gin.H{"error": "server is unavailable now"})
 		c.Abort()
 		return
@@ -254,7 +284,11 @@ func (ctrl *Controller) UpdatePost(c *gin.Context) {
 			c.IndentedJSON(http.StatusInternalServerError, gin.H{"error": "server is unavailable now"})
 		}
 
-		ctrl.logger.Error(fmt.Sprintf("ctrl.db.UpdatePost(%#v): %s", &post, err), "method", "ctrl.UpdatePost")
+		ctrl.logger.Error(
+			fmt.Sprintf("ctrl.db.UpdatePost(%#v): %s", &post, err),
+			"method",
+			"ctrl.UpdatePost",
+		)
 		c.Abort()
 		return
 	}
@@ -273,7 +307,11 @@ func (ctrl *Controller) DeletePost(c *gin.Context) {
 	}
 
 	if err := ctrl.db.DeletePost(uint(id)); err != nil {
-		ctrl.logger.Error(fmt.Sprintf("ctrl.db.DeletePost(%d): %s", id, err), "method", "ctrl.DeletePost")
+		ctrl.logger.Error(
+			fmt.Sprintf("ctrl.db.DeletePost(%d): %s", id, err),
+			"method",
+			"ctrl.DeletePost",
+		)
 		c.IndentedJSON(http.StatusInternalServerError, gin.H{"error": "server is unavailable now"})
 		c.Abort()
 		return
