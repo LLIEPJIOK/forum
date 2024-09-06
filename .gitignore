@@ -17,9 +17,10 @@
 # Dependency directories (remove the comment below to include it)
 # vendor/
 .vscode/
+__pycache__/
 
 # Logs directory
-forum/logs/
+logs/
 
 # Go workspace file
 go.work
