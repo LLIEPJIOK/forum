@@ -1,8 +1,10 @@
 package database
 
 import (
+	"database/sql"
 	"errors"
 	"fmt"
+	"time"
 
 	"gorm.io/gorm"
 )
@@ -32,7 +34,7 @@ func (db *Database) Migrate() error {
 }
 
 func (db *Database) AddUser(user *User) error {
-	_, err := db.GetUserByEmail(user.Email)
+	_, err := db.GetUserByEmail(*user.Email)
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			result := db.gormDB.Create(user)
@@ -42,7 +44,7 @@ func (db *Database) AddUser(user *User) error {
 
 			return nil
 		} else {
-			return fmt.Errorf("cannot check email = %s existence: %w", user.Email, err)
+			return fmt.Errorf("cannot check email = %#v existence: %w", user.Email, err)
 		}
 	}
 
@@ -65,13 +67,16 @@ func (db *Database) GetUserByID(id uint) (*User, error) {
 	if result.Error != nil {
 		return nil, fmt.Errorf("cannot get user by id = %d: %w", id, result.Error)
 	}
+	if user.RemovedAt.Valid {
+		return nil, fmt.Errorf("cannot get user by id = %d: %w", id, gorm.ErrRecordNotFound)
+	}
 
 	return user, nil
 }
 
 func (db *Database) GetAllUsers() ([]*User, error) {
 	var users []*User
-	result := db.gormDB.Find(&users)
+	result := db.gormDB.Where("removed_at IS NULL").Find(&users)
 	if result.Error != nil {
 		return nil, fmt.Errorf("cannot get all users: %w", result.Error)
 	}
@@ -80,10 +85,17 @@ func (db *Database) GetAllUsers() ([]*User, error) {
 }
 
 func (db *Database) UpdateUser(user *User) (*User, error) {
-	if user.Email != "" {
+	if *user.Email != "" {
 		if err := db.gormDB.Where("email = ?", user.Email).First(&User{}).Error; err == nil {
 			return nil, fmt.Errorf("cannot update user %#v: %w", user, ErrUniqueConstraint)
 		}
+	}
+
+	_, err := db.GetUserByID(user.ID)
+	if err == nil {
+		return nil, fmt.Errorf("cannot update user %#v: %w", user, gorm.ErrRecordNotFound)
+	} else if !errors.Is(err, gorm.ErrRecordNotFound) {
+		return nil, fmt.Errorf("cannot update user %#v: %w", user, err)
 	}
 
 	result := db.gormDB.Model(&User{}).Where("id = ?", user.ID).Updates(user)
@@ -100,9 +112,21 @@ func (db *Database) UpdateUser(user *User) (*User, error) {
 }
 
 func (db *Database) DeleteUser(id uint) error {
-	result := db.gormDB.Delete(&User{}, id)
+	result := db.gormDB.Model(&User{}).Select("nickname", "email", "removed_at").Where("id = ?", id).Updates(&User{
+		Nickname: "Deleted user",
+		Email:    nil,
+		RemovedAt: sql.NullTime{
+			Time:  time.Now(),
+			Valid: true,
+		},
+	})
 	if result.Error != nil {
 		return fmt.Errorf("cannot delete user with id = %d: %w", id, result.Error)
+	}
+
+	result = db.gormDB.Table("user_x_chat").Where("user_id = ?", id).Delete(nil)
+	if result.Error != nil {
+		return fmt.Errorf("cannot delete user with id = %d from chats: %w", id, result.Error)
 	}
 
 	return nil
@@ -281,7 +305,17 @@ func (db *Database) UpdateChat(chat *Chat) (*Chat, error) {
 }
 
 func (db *Database) DeleteChat(id uint) error {
-	result := db.gormDB.Delete(&Chat{}, id)
+	result := db.gormDB.Table("user_x_chat").Where("chat_id = ?", id).Delete(nil)
+	if result.Error != nil {
+		return fmt.Errorf("cannot delete users from chat with id = %d: %w", id, result.Error)
+	}
+
+	result = db.gormDB.Model(&Message{}).Where("chat_id = ?", id).Delete(nil)
+	if result.Error != nil {
+		return fmt.Errorf("cannot delete users from chat with id = %d: %w", id, result.Error)
+	}
+
+	result = db.gormDB.Delete(&Chat{}, id)
 	if result.Error != nil {
 		return fmt.Errorf("cannot delete chat with id = %d: %w", id, result.Error)
 	}

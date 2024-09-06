@@ -1,18 +1,20 @@
 package database
 
 import (
+	"database/sql"
 	"time"
 )
 
 type User struct {
-	ID           uint      `gorm:"primarykey; autoIncrement" json:"id"`
-	Nickname     string    `gorm:"not null;" json:"nickname"`
-	Email        string    `gorm:"not null; unique;" json:"email"`
-	HashPassword string    `gorm:"not null;" json:"password"`
-	RegisteredAt time.Time `gorm:"autoCreateTime" json:"registered_at"`
-	Posts        []Post    `gorm:"foreignKey:AuthorID;" json:"-"`
-	Messages     []Message `gorm:"foreignKey:SenderID;" json:"-"`
-	Chats        []Chat    `gorm:"many2many:user_x_chat;" json:"-"`
+	ID           uint         `gorm:"primarykey; autoIncrement" json:"id"`
+	Nickname     string       `gorm:"not null;" json:"nickname"`
+	Email        *string      `gorm:"unique;" json:"email"`
+	HashPassword string       `gorm:"not null;" json:"password"`
+	RegisteredAt time.Time    `gorm:"autoCreateTime" json:"registered_at"`
+	RemovedAt    sql.NullTime `json:"-"`
+	Posts        []Post       `gorm:"foreignKey:AuthorID;" json:"-"`
+	Messages     []Message    `gorm:"foreignKey:SenderID;" json:"-"`
+	Chats        []Chat       `gorm:"many2many:user_x_chat;" json:"-"`
 }
 
 type Post struct {
