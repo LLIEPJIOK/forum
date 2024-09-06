@@ -30,6 +30,12 @@ type DBInterface interface {
 	GetAllMessages() ([]*database.Message, error)
 	UpdateMessage(message *database.Message) (*database.Message, error)
 	DeleteMessage(id uint) error
+
+	AddChat(chat *database.Chat) error
+	GetChat(id uint) (*database.Chat, error)
+	GetAllChats() ([]*database.Chat, error)
+	UpdateChat(chat *database.Chat) (*database.Chat, error)
+	DeleteChat(id uint) error
 }
 
 type Controller struct {
@@ -454,6 +460,138 @@ func (ctrl *Controller) DeleteMessage(c *gin.Context) {
 			fmt.Sprintf("ctrl.db.DeleteMessage(%d): %s", id, err),
 			"method",
 			"ctrl.DeleteMessage",
+		)
+		c.IndentedJSON(http.StatusInternalServerError, gin.H{"error": "server is unavailable now"})
+		c.Abort()
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "successfully deleted"})
+}
+
+func (ctrl *Controller) AddChat(c *gin.Context) {
+	var chat database.Chat
+	if err := c.BindJSON(&chat); err != nil {
+		ctrl.logger.Info(fmt.Sprintf("invalid chat json: %s", err), "method", "ctrl.AddChat")
+		c.IndentedJSON(http.StatusInternalServerError, gin.H{"error": "json is invalid"})
+		c.Abort()
+		return
+	}
+
+	if err := ctrl.db.AddChat(&chat); err != nil {
+		c.IndentedJSON(http.StatusInternalServerError, gin.H{"error": "server is unavailable now"})
+		ctrl.logger.Error(
+			fmt.Sprintf("ctrl.db.AddChat(%#v): %s", &chat, err),
+			"method",
+			"ctrl.AddChat",
+		)
+		c.Abort()
+		return
+	}
+
+	c.IndentedJSON(http.StatusOK, chat)
+}
+
+func (ctrl *Controller) GetChat(c *gin.Context) {
+	strID := c.Param("id")
+	id, err := strconv.Atoi(strID)
+	if err != nil {
+		ctrl.logger.Info(fmt.Sprintf("invalid chat id: %s", err), "method", "ctrl.GetChat")
+		c.IndentedJSON(http.StatusBadRequest, gin.H{"error": "invalid chat id"})
+		c.Abort()
+		return
+	}
+
+	chat, err := ctrl.db.GetChat(uint(id))
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			c.IndentedJSON(http.StatusNotFound, gin.H{"error": "no chat with this id"})
+		} else {
+			c.IndentedJSON(http.StatusInternalServerError, gin.H{"error": "server is unavailable now"})
+		}
+
+		ctrl.logger.Info(
+			fmt.Sprintf("ctrl.db.GetChat(uint(%d)): %s", id, err),
+			"method",
+			"ctrl.GetChat",
+		)
+		c.Abort()
+		return
+	}
+
+	c.IndentedJSON(http.StatusOK, chat)
+}
+
+func (ctrl *Controller) GetAllChats(c *gin.Context) {
+	chats, err := ctrl.db.GetAllChats()
+	if err != nil {
+		ctrl.logger.Error(
+			fmt.Sprintf("ctrl.db.GetAllChats(): %s", err),
+			"method",
+			"ctrl.GetAllChats",
+		)
+		c.IndentedJSON(http.StatusInternalServerError, gin.H{"error": "server is unavailable now"})
+		c.Abort()
+		return
+	}
+
+	c.IndentedJSON(http.StatusOK, chats)
+}
+
+func (ctrl *Controller) UpdateChat(c *gin.Context) {
+	strID := c.Param("id")
+	id, err := strconv.Atoi(strID)
+	if err != nil {
+		ctrl.logger.Info(fmt.Sprintf("invalid chat id: %s", err), "method", "ctrl.UpdateChat")
+		c.IndentedJSON(http.StatusBadRequest, gin.H{"error": "invalid chat id"})
+		c.Abort()
+		return
+	}
+
+	var chat database.Chat
+	if err := c.BindJSON(&chat); err != nil {
+		ctrl.logger.Info(fmt.Sprintf("invalid chat json: %s", err), "method", "ctrl.UpdateChat")
+		c.IndentedJSON(http.StatusInternalServerError, gin.H{"error": "json is invalid"})
+		c.Abort()
+		return
+	}
+
+	chat.ID = uint(id)
+	updatedChat, err := ctrl.db.UpdateChat(&chat)
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			c.IndentedJSON(http.StatusNotFound, gin.H{"error": "no chat with this id"})
+		} else {
+			c.IndentedJSON(http.StatusInternalServerError, gin.H{"error": "server is unavailable now"})
+		}
+
+		ctrl.logger.Error(
+			fmt.Sprintf("ctrl.db.UpdateChat(%#v): %s", &chat, err),
+			"method",
+			"ctrl.UpdateChat",
+		)
+		c.Abort()
+		return
+	}
+
+	c.IndentedJSON(http.StatusOK, updatedChat)
+}
+
+func (ctrl *Controller) DeleteChat(c *gin.Context) {
+	strID := c.Param("id")
+	id, err := strconv.Atoi(strID)
+	if err != nil {
+		ctrl.logger.Info(fmt.Sprintf("invalid chat id: %s", err), "method", "ctrl.DeleteChat")
+		c.IndentedJSON(http.StatusBadRequest, gin.H{"error": "invalid chat id"})
+		c.Abort()
+		return
+	}
+
+	if err := ctrl.db.DeleteChat(uint(id)); err != nil {
+		ctrl.logger.Error(
+			fmt.Sprintf("ctrl.db.DeleteChat(%d): %s", id, err),
+			"method",
+			"ctrl.DeleteChat",
 		)
 		c.IndentedJSON(http.StatusInternalServerError, gin.H{"error": "server is unavailable now"})
 		c.Abort()

@@ -33,6 +33,13 @@ func New(ctrl *controller.Controller) *Router {
 	message.PUT(":id", ctrl.UpdateMessage)
 	message.DELETE(":id", ctrl.DeleteMessage)
 
+	chat := eng.Group("/chat")
+	chat.POST("", ctrl.AddChat)
+	chat.GET(":id", ctrl.GetChat)
+	chat.GET("/list/", ctrl.GetAllChats)
+	chat.PUT(":id", ctrl.UpdateChat)
+	chat.DELETE(":id", ctrl.DeleteChat)
+
 	return &Router{
 		engine: eng,
 	}
