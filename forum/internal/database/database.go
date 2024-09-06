@@ -256,14 +256,28 @@ func (db *Database) GetChat(id uint) (*Chat, error) {
 	return chat, nil
 }
 
-func (db *Database) UpdateChat(chat *Chat) error {
-	result := db.gormDB.Save(chat)
-
+func (db *Database) GetAllChats() ([]*Chat, error) {
+	var chats []*Chat
+	result := db.gormDB.Find(&chats)
 	if result.Error != nil {
-		return fmt.Errorf("cannot update chat %#v: %w", chat, result.Error)
+		return nil, fmt.Errorf("cannot get all chats: %w", result.Error)
 	}
 
-	return nil
+	return chats, nil
+}
+
+func (db *Database) UpdateChat(chat *Chat) (*Chat, error) {
+	result := db.gormDB.Model(&Chat{}).Select("name").Where("id = ?", chat.ID).Updates(chat)
+	if result.Error != nil {
+		return nil, fmt.Errorf("cannot update chat %#v: %w", chat, result.Error)
+	}
+
+	updatedChat, err := db.GetChat(chat.ID)
+	if err != nil {
+		return nil, fmt.Errorf("db.GetChat(%d): %w", chat.ID, err)
+	}
+
+	return updatedChat, nil
 }
 
 func (db *Database) DeleteChat(id uint) error {
