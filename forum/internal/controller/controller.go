@@ -343,7 +343,7 @@ func (ctrl *Controller) AddMessage(c *gin.Context) {
 
 	if err := ctrl.db.AddMessage(&message); err != nil {
 		if errors.Is(err, database.ErrForeignKeyConstraint) {
-			c.IndentedJSON(http.StatusBadRequest, gin.H{"error": "no such creator with this id or chat with this id"})
+			c.IndentedJSON(http.StatusBadRequest, gin.H{"error": "no such sender with this id or chat with this id"})
 		} else {
 			c.IndentedJSON(http.StatusInternalServerError, gin.H{"error": "server is unavailable now"})
 		}
