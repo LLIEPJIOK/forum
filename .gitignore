@@ -28,3 +28,5 @@ go.work.sum
 
 # env file
 .env
+
+da_clickhouse/clickhouse-data/
